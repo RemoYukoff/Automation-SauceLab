@@ -1,4 +1,4 @@
-package com.yourcompany.Tests;
+package com.remo.Tests;
 
 import com.saucelabs.common.SauceOnDemandAuthentication;
 import com.saucelabs.common.SauceOnDemandSessionIdProvider;
@@ -14,10 +14,14 @@ import org.testng.annotations.AfterMethod;
 import org.testng.annotations.DataProvider;
 import org.testng.annotations.Listeners;
 
+import java.io.FileNotFoundException;
+import java.io.FileReader;
+import java.io.IOException;
 import java.lang.reflect.Method;
 import java.net.MalformedURLException;
 import java.net.URL;
 import java.rmi.UnexpectedException;
+import java.util.Properties;
 
 /**
  * Simple TestNG test which demonstrates being instantiated via a DataProvider in order to supply multiple browser combinations.
@@ -25,12 +29,7 @@ import java.rmi.UnexpectedException;
  * @author Neil Manvar
  */
 public class TestBase  {
-
     public String buildTag = System.getenv("BUILD_TAG");
-
-    public String username = System.getenv("SAUCE_USERNAME");
-
-    public String accesskey = System.getenv("SAUCE_ACCESS_KEY");
 
     /**
      * ThreadLocal variable which contains the  {@link WebDriver} instance which is used to perform browser interactions with.
@@ -77,8 +76,7 @@ public class TestBase  {
 
     /**
      * Constructs a new {@link RemoteWebDriver} instance which is configured to use the capabilities defined by the browser,
-     * version and os parameters, and which is configured to run against ondemand.saucelabs.com, using
-     * the username and access key populated by the {@link #authentication} instance.
+     * version and os parameters, and which is configured to run against ondemand.saucelabs.com
      *
      * @param browser Represents the browser to be used as part of the test run.
      * @param version Represents the version of the browser to be used as part of the test run.
@@ -88,9 +86,16 @@ public class TestBase  {
      * @throws MalformedURLException if an error occurs parsing the url
      */
     protected void createDriver(String browser, String version, String os, String methodName)
-            throws MalformedURLException, UnexpectedException {
+            throws IOException {
         DesiredCapabilities capabilities = new DesiredCapabilities();
 
+        String credentialsLocation = ClassLoader.getSystemResource("credentials.properties").getPath();
+        FileReader reader = new FileReader(credentialsLocation);
+        Properties p =new Properties();
+        p.load(reader);
+
+        capabilities.setCapability("username",p.get("username"));
+        capabilities.setCapability("accessKey",p.get("access-key"));
         // set desired capabilities to launch appropriate browser on Sauce
         capabilities.setCapability(CapabilityType.BROWSER_NAME, browser);
         capabilities.setCapability(CapabilityType.VERSION, version);
@@ -103,7 +108,7 @@ public class TestBase  {
 
         // Launch remote browser and set it as the current thread
         webDriver.set(new RemoteWebDriver(
-                new URL("https://" + username + ":" + accesskey + "@ondemand.saucelabs.com/wd/hub"),
+                new URL("https://ondemand.saucelabs.com:443/wd/hub"),
                 capabilities));
 
         // set current sessionId
